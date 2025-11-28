@@ -5,65 +5,33 @@ using System.Linq;
 using System.Xml.Serialization;
 using System.Windows.Forms;
 
-namespace ApartmentRentalSystem
+namespace ApartmentRentalAdmin
 {
-    public class Apartment
-    {
-        public int Id { get; set; }
-        public string Address { get; set; }
-        public int Rooms { get; set; }
-        public double Area { get; set; }
-        public decimal Price { get; set; }
-        public string Description { get; set; }
-        public bool IsAvailable { get; set; }
-        public string LandlordName { get; set; }
-        public string LandlordPhone { get; set; }
-        public DateTime AddedDate { get; set; }
-    }
-
-    public class RentalApplication
-    {
-        public int Id { get; set; }
-        public int ApartmentId { get; set; }
-        public string TenantName { get; set; }
-        public string TenantPhone { get; set; }
-        public string TenantEmail { get; set; }
-        public DateTime DesiredMoveInDate { get; set; }
-        public int RentalPeriodMonths { get; set; }
-        public string Comments { get; set; }
-        public DateTime ApplicationDate { get; set; }
-        public string Status { get; set; } // "Pending", "Approved", "Rejected"
-    }
-
     public static class DatabaseHelper
     {
-        private static string apartmentsFile = "apartments.xml";
-        private static string applicationsFile = "applications.xml";
+        private static string dataFile = "apartments.xml";
         private static List<Apartment> apartments = new List<Apartment>();
-        private static List<RentalApplication> applications = new List<RentalApplication>();
-        private static int nextApartmentId = 1;
-        private static int nextApplicationId = 1;
+        private static int nextId = 1;
 
         public static void InitializeDatabase()
         {
-            LoadApartments();
-            LoadApplications();
-            
+            LoadData();
+
             // Добавляем тестовые данные если база пустая
             if (!apartments.Any())
             {
-                AddSampleApartments();
+                AddSampleData();
             }
         }
 
-        private static void AddSampleApartments()
+        private static void AddSampleData()
         {
             apartments.Add(new Apartment
             {
-                Id = nextApartmentId++,
+                Id = nextId++,
                 Address = "ул. Ленина, д. 10, кв. 25",
                 Rooms = 2,
-                Area = 45.5,
+                Area = 45.5m,
                 Price = 25000,
                 Description = "Уютная двухкомнатная квартира в центре города",
                 IsAvailable = true,
@@ -74,12 +42,12 @@ namespace ApartmentRentalSystem
 
             apartments.Add(new Apartment
             {
-                Id = nextApartmentId++,
+                Id = nextId++,
                 Address = "пр. Мира, д. 15, кв. 12",
                 Rooms = 1,
-                Area = 35.0,
+                Area = 35.0m,
                 Price = 18000,
-                Description = "Компактная однокомнатная квартира с ремонтом",
+                Description = "Компактная однокомнатная квартира",
                 IsAvailable = true,
                 LandlordName = "Петрова Мария",
                 LandlordPhone = "+7-900-987-65-43",
@@ -88,135 +56,133 @@ namespace ApartmentRentalSystem
 
             apartments.Add(new Apartment
             {
-                Id = nextApartmentId++,
+                Id = nextId++,
                 Address = "ул. Садовая, д. 5, кв. 78",
                 Rooms = 3,
-                Area = 65.0,
+                Area = 65.0m,
                 Price = 35000,
-                Description = "Просторная трехкомнатная квартира с балконом",
-                IsAvailable = true,
+                Description = "Просторная трехкомнатная квартира",
+                IsAvailable = false,
                 LandlordName = "Сидоров Алексей",
                 LandlordPhone = "+7-900-555-44-33",
                 AddedDate = DateTime.Now
             });
 
-            SaveApartments();
+            SaveData();
         }
 
-        // Методы для работы с квартирами
-        public static List<Apartment> GetAvailableApartments()
+        public static List<Apartment> GetAllApartments()
         {
-            return apartments.Where(a => a.IsAvailable).OrderByDescending(a => a.AddedDate).ToList();
+            return apartments.OrderByDescending(a => a.AddedDate).ToList();
         }
 
-        public static List<Apartment> SearchApartments(string address, int? minRooms, int? maxRooms, decimal? maxPrice)
+        public static void AddApartment(Apartment apartment)
         {
-            var query = apartments.Where(a => a.IsAvailable);
-
-            if (!string.IsNullOrEmpty(address))
-                query = query.Where(a => a.Address.ToLower().Contains(address.ToLower()));
-
-            if (minRooms.HasValue)
-                query = query.Where(a => a.Rooms >= minRooms.Value);
-
-            if (maxRooms.HasValue)
-                query = query.Where(a => a.Rooms <= maxRooms.Value);
-
-            if (maxPrice.HasValue)
-                query = query.Where(a => a.Price <= maxPrice.Value);
-
-            return query.OrderBy(a => a.Price).ToList();
+            apartment.Id = nextId++;
+            apartment.AddedDate = DateTime.Now;
+            apartments.Add(apartment);
+            SaveData();
         }
 
-        // Методы для работы с заявками
-        public static void SubmitApplication(RentalApplication application)
+        public static void UpdateApartment(Apartment apartment)
         {
-            application.Id = nextApplicationId++;
-            application.ApplicationDate = DateTime.Now;
-            application.Status = "Pending";
-            applications.Add(application);
-            SaveApplications();
+            var existing = apartments.FirstOrDefault(a => a.Id == apartment.Id);
+            if (existing != null)
+            {
+                existing.Address = apartment.Address;
+                existing.Rooms = apartment.Rooms;
+                existing.Area = apartment.Area;
+                existing.Price = apartment.Price;
+                existing.Description = apartment.Description;
+                existing.IsAvailable = apartment.IsAvailable;
+                existing.LandlordName = apartment.LandlordName;
+                existing.LandlordPhone = apartment.LandlordPhone;
+                SaveData();
+            }
         }
 
-        public static List<RentalApplication> GetUserApplications(string userPhone)
+        public static void DeleteApartment(int id)
         {
-            return applications.Where(a => a.TenantPhone == userPhone)
-                             .OrderByDescending(a => a.ApplicationDate)
-                             .ToList();
+            var apartment = apartments.FirstOrDefault(a => a.Id == id);
+            if (apartment != null)
+            {
+                apartments.Remove(apartment);
+                SaveData();
+            }
         }
 
-        // Сохранение и загрузка данных
-        private static void LoadApartments()
+        // ВЫЧИСЛИТЕЛЬНЫЕ ФУНКЦИИ
+        public static decimal CalculateOptimalPrice(Apartment apartment)
+        {
+            var similar = apartments.Where(a => a.Rooms == apartment.Rooms).ToList();
+            if (!similar.Any()) return apartment.Price;
+
+            decimal avgPrice = similar.Average(a => a.Price);
+            decimal pricePerSqm = similar.Average(a => a.Area > 0 ? a.Price / a.Area : 0);
+
+            // Расчет оптимальной цены на основе средней цены за м²
+            return apartment.Area * pricePerSqm;
+        }
+
+        public static decimal CalculateMonthlyRevenue()
+        {
+            return apartments.Where(a => !a.IsAvailable).Sum(a => a.Price);
+        }
+
+        public static decimal CalculateAnnualRevenue()
+        {
+            return CalculateMonthlyRevenue() * 12;
+        }
+
+        public static (int total, int available, int rented) GetStatistics()
+        {
+            int total = apartments.Count;
+            int available = apartments.Count(a => a.IsAvailable);
+            int rented = total - available;
+            return (total, available, rented);
+        }
+
+        public static List<Apartment> FindUndervaluedApartments()
+        {
+            return apartments.Where(a => a.IsAvailable)
+                           .Where(a => a.Price < CalculateOptimalPrice(a) * 0.9m)
+                           .ToList();
+        }
+
+        private static void LoadData()
         {
             try
             {
-                if (File.Exists(apartmentsFile))
+                if (File.Exists(dataFile))
                 {
                     XmlSerializer serializer = new XmlSerializer(typeof(List<Apartment>));
-                    using (FileStream stream = new FileStream(apartmentsFile, FileMode.Open))
+                    using (FileStream stream = new FileStream(dataFile, FileMode.Open))
                     {
                         apartments = (List<Apartment>)serializer.Deserialize(stream);
-                        nextApartmentId = apartments.Count > 0 ? apartments.Max(a => a.Id) + 1 : 1;
+                        nextId = apartments.Count > 0 ? apartments.Max(a => a.Id) + 1 : 1;
                     }
                 }
             }
             catch (Exception)
             {
                 apartments = new List<Apartment>();
-                nextApartmentId = 1;
+                nextId = 1;
             }
         }
 
-        private static void SaveApartments()
+        private static void SaveData()
         {
             try
             {
                 XmlSerializer serializer = new XmlSerializer(typeof(List<Apartment>));
-                using (FileStream stream = new FileStream(apartmentsFile, FileMode.Create))
+                using (FileStream stream = new FileStream(dataFile, FileMode.Create))
                 {
                     serializer.Serialize(stream, apartments);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка сохранения квартир: {ex.Message}", "Ошибка");
-            }
-        }
-
-        private static void LoadApplications()
-        {
-            try
-            {
-                if (File.Exists(applicationsFile))
-                {
-                    XmlSerializer serializer = new XmlSerializer(typeof(List<RentalApplication>));
-                    using (FileStream stream = new FileStream(applicationsFile, FileMode.Open))
-                    {
-                        applications = (List<RentalApplication>)serializer.Deserialize(stream);
-                        nextApplicationId = applications.Count > 0 ? applications.Max(a => a.Id) + 1 : 1;
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                applications = new List<RentalApplication>();
-                nextApplicationId = 1;
-            }
-        }
-
-        private static void SaveApplications()
-        {
-            try
-            {
-                XmlSerializer serializer = new XmlSerializer(typeof(List<RentalApplication>));
-                using (FileStream stream = new FileStream(applicationsFile, FileMode.Create))
-                {
-                    serializer.Serialize(stream, applications);
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка сохранения заявок: {ex.Message}", "Ошибка");
+                MessageBox.Show($"Ошибка сохранения: {ex.Message}", "Ошибка");
             }
         }
     }

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Windows.Forms;
 
-namespace ApartmentRentalSystem
+namespace ApartmentRentalAdmin
 {
     internal static class Program
     {
@@ -10,7 +10,7 @@ namespace ApartmentRentalSystem
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new TenantMainForm());
+            Application.Run(new MainForm());
         }
     }
 }
